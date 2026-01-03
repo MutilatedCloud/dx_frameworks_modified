@@ -97,17 +97,31 @@ static int UART_Message_Parse_Stream(const uint8_t *stream_buf, uint16_t stream_
     return -1;  // 失败
 }
 
+// 标记是否有新数据需要处理
+static volatile uint8_t Controller_Rx_Flag = 0;
+
 void Angle_Receive_Callback(uint8_t *buf, uint32_t len)
 {
-    // 1. 把新收到的字节追加到缓冲区
+    // 中断中只做数据拷贝，不做复杂解析
+    if (len > CONTROLLER_RX_BUF_SIZE) {
+        len = CONTROLLER_RX_BUF_SIZE;
+    }
     if (Controller_Rx_Len + len > CONTROLLER_RX_BUF_SIZE) {
-        // 缓冲区溢出，清空重来
         Controller_Rx_Len = 0;
     }
-    memcpy(&Controller_Rx_Buffer[Controller_Rx_Len], buf, len);
-    Controller_Rx_Len += len;
+    memcpy(&Controller_Rx_Buffer[Controller_Rx_Len], buf, (uint16_t)len);
+    Controller_Rx_Len += (uint16_t)len;
+    Controller_Rx_Flag = 1;
+}
 
-    // 2. 循环尝试解析，直到缓冲区里没有完整帧
+// 在任务中调用此函数处理接收到的数据
+void Angle_Process_Data(void)
+{
+    if (!Controller_Rx_Flag) {
+        return;
+    }
+    Controller_Rx_Flag = 0;
+
     while (Controller_Rx_Len >= CONTROLLER_UART_FRAME_LEN)
     {
         uint16_t consumed = 0;
@@ -122,13 +136,11 @@ void Angle_Receive_Callback(uint8_t *buf, uint32_t len)
 
         if (result == 0)
         {
-            // 解析成功，更新全局角度值
             for (int i = 0; i < 6; i++) {
                 joint_radian[i] = angles[i] - PI;
             }
         }
 
-        // 3. 移除已消耗的字节
         if (consumed > 0 && consumed <= Controller_Rx_Len)
         {
             memmove(Controller_Rx_Buffer, 
@@ -138,7 +150,6 @@ void Angle_Receive_Callback(uint8_t *buf, uint32_t len)
         }
         else
         {
-            // 没有消耗任何字节，退出循环等待更多数据
             break;
         }
     }
@@ -167,6 +178,7 @@ void uart_Transmit_Angle(void *argment)
     // testUart_tx_init();
     while (1) {
         // uart_tx_send_IT(&testUart_tx_msg);
+        Angle_Process_Data();  // 在任务中处理接收数据
         osDelay(10);
     }
 }
