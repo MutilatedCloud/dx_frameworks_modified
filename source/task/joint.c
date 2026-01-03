@@ -14,7 +14,7 @@
 #define CONTROLLER_UART_HEAD1       0x55
 #define CONTROLLER_UART_PAYLOAD_LEN 24
 #define CONTROLLER_UART_FRAME_LEN   (2 + CONTROLLER_UART_PAYLOAD_LEN + 1 + 2)  // 帧头2 + 数据24 + 校验1 + 结尾2
-#define CONTROLLER_RX_BUF_SIZE      128
+#define CONTROLLER_RX_BUF_SIZE      512
 
 // 接收缓冲区
 static uint8_t Controller_Rx_Buffer[CONTROLLER_RX_BUF_SIZE];
@@ -122,14 +122,23 @@ void Angle_Process_Data(void)
     }
     Controller_Rx_Flag = 0;
 
-    while (Controller_Rx_Len >= CONTROLLER_UART_FRAME_LEN)
+    // 进入临界区，防止中断修改缓冲区
+    __disable_irq();
+    uint16_t local_len = Controller_Rx_Len;
+    uint8_t local_buf[CONTROLLER_RX_BUF_SIZE];
+    memcpy(local_buf, Controller_Rx_Buffer, local_len);
+    Controller_Rx_Len = 0;  // 清空原缓冲区
+    __enable_irq();
+
+    uint16_t offset = 0;
+    while (local_len - offset >= CONTROLLER_UART_FRAME_LEN)
     {
         uint16_t consumed = 0;
         float angles[6];
 
         int result = UART_Message_Parse_Stream(
-            Controller_Rx_Buffer,
-            Controller_Rx_Len,
+            &local_buf[offset],
+            local_len - offset,
             angles,
             &consumed
         );
@@ -141,17 +150,24 @@ void Angle_Process_Data(void)
             }
         }
 
-        if (consumed > 0 && consumed <= Controller_Rx_Len)
+        if (consumed > 0)
         {
-            memmove(Controller_Rx_Buffer, 
-                    &Controller_Rx_Buffer[consumed], 
-                    Controller_Rx_Len - consumed);
-            Controller_Rx_Len -= consumed;
+            offset += consumed;
         }
         else
         {
             break;
         }
+    }
+
+    // 把未处理完的数据放回缓冲区
+    if (offset < local_len)
+    {
+        __disable_irq();
+        uint16_t remaining = local_len - offset;
+        memmove(&Controller_Rx_Buffer[Controller_Rx_Len], &local_buf[offset], remaining);
+        Controller_Rx_Len += remaining;
+        __enable_irq();
     }
 }
 void angle_msg_rx_init(void)
@@ -179,7 +195,7 @@ void uart_Transmit_Angle(void *argment)
     while (1) {
         // uart_tx_send_IT(&testUart_tx_msg);
         Angle_Process_Data();  // 在任务中处理接收数据
-        osDelay(10);
+        osDelay(2);    
     }
 }
 void joint_motor_init(void)
