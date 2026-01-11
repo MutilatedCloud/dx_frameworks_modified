@@ -1,7 +1,10 @@
+#ifndef __CONTROLLER_TASK_H__
+#define __CONTROLLER_TASK_H__
+
 #include <stdint.h>
 #include "arm_math_types.h"
 #include "motor_DJI.h"
- #include "uart_api.h"
+#include "uart_api.h"
 
 #define Trans_Angle (360.0f / 8191.0f)
 
@@ -33,3 +36,7 @@ void Controller_Angle_Refresh(DJI_motor_t *Controller_Motor_DJI, DJI_motor_t *Co
 void UART_Message_Trans(float32_t float_array[], uint8_t out_buf[]);
 uart_status_t UART_Message_Parse(const uint8_t in_buf[], float32_t out_array[]);
 void Controller_Uart_tx_init(uart_msg_t *tx_msg, uint8_t *tx_buf);
+void Controller_Wait_And_Capture_Zero(DJI_motor_t *Controller_Motor_DJI,DJI_motor_t *Controller_Motor_6020,float32_t *Joint_Angle,float32_t *Angle_Zero_Point);
+uint8_t Controller_Motor_Data_Ready(DJI_motor_t *Controller_Motor_DJI, DJI_motor_t *Controller_Motor_6020);
+
+#endif

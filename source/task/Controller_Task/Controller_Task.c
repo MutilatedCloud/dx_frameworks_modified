@@ -1,6 +1,3 @@
-#ifndef __CONTROLLER_TASK_H__
-#define __CONTROLLER_TASK_H__
-
 #include "Controller_Task.h"
 #include "cmsis_os2.h"
 #include "FreeRTOS.h"
@@ -14,13 +11,12 @@
 
 float32_t test_angle[6];
 
-
 void Controller_Task(void *argument)
 {
     /* USER CODE BEGIN Controller_Task */
     UNUSED(argument);
     float32_t Joint_Angle[6];
-    float32_t Angle_Zero_Point[6];
+    float32_t Angle_Zero_Point[6] = {0};
     DJI_motor_t *Controller_Motor_DJI;
     DJI_motor_t *Controller_Motor_6020;
     uart_msg_t Controller_Uart_tx_msg;
@@ -29,13 +25,7 @@ void Controller_Task(void *argument)
     Controller_Motor_DJI = pvPortMalloc(sizeof(DJI_motor_t));
     Controller_Motor_6020 = pvPortMalloc(sizeof(DJI_motor_t));
     Motor_Init_DJI(&Controller_Motor_DJI, &Controller_Motor_6020); 
-    osDelay(200);
-    for(int i = 0;i < 6;i++)
-    {
-        Controller_Angle_Refresh(Controller_Motor_DJI,  Controller_Motor_6020, Joint_Angle);
-        Angle_Zero_Point[i] = Joint_Angle[i];
-    }
-
+    Controller_Wait_And_Capture_Zero(Controller_Motor_DJI,Controller_Motor_6020,Joint_Angle,Angle_Zero_Point);
     Controller_Uart_tx_init(&Controller_Uart_tx_msg, Uart_Send_Buffer);
 
     for(;;)
@@ -61,7 +51,50 @@ void Controller_Task(void *argument)
         Controller_Uart_tx_msg.pBuffer = Uart_Send_Buffer;
         Controller_Uart_tx_msg.Len = CONTROLLER_UART_DATA_LEN;
         uart_tx_send_IT(&Controller_Uart_tx_msg);
+        osDelay(4);
+    }
+}
+
+uint8_t Controller_Motor_Data_Ready(DJI_motor_t *Controller_Motor_DJI, DJI_motor_t *Controller_Motor_6020)
+{
+    if (Controller_Motor_DJI == NULL || Controller_Motor_6020 == NULL)
+    {
+        return 0;
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (Controller_Motor_DJI->motor_msg[i].can_msg.cnt == 0)
+        {
+            return 0;
+        }
+    }
+    for (int i = 0; i < 2; i++)
+    {
+        if (Controller_Motor_6020->motor_msg[i].can_msg.cnt == 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void Controller_Wait_And_Capture_Zero(DJI_motor_t *Controller_Motor_DJI,DJI_motor_t *Controller_Motor_6020,float32_t *Joint_Angle,float32_t *Angle_Zero_Point)
+{
+    for (int t = 0; t < 300; t++)
+    {
+        Controller_Angle_Refresh(Controller_Motor_DJI, Controller_Motor_6020, Joint_Angle);
+        if (Controller_Motor_Data_Ready(Controller_Motor_DJI, Controller_Motor_6020))
+        {
+            break;
+        }
         osDelay(10);
+    }
+
+    Controller_Angle_Refresh(Controller_Motor_DJI, Controller_Motor_6020, Joint_Angle);
+    for (int i = 0; i < 6; i++)
+    {
+        Angle_Zero_Point[i] = Joint_Angle[i];
     }
 }
 
@@ -99,11 +132,11 @@ void Controller_Angle_Refresh(DJI_motor_t *Controller_Motor_DJI, DJI_motor_t *Co
     Motor_DJI_Refresh(Controller_Motor_6020);
     for(int i = 0;i < 4;i++)
     {
-        Joint_Angle[i] = Controller_Motor_DJI->motor_msg[i].motor_angle * Trans_Angle + 180;
+        Joint_Angle[i + 2] = Controller_Motor_DJI->motor_msg[i].motor_angle * Trans_Angle + 180;
     }
     for(int i = 0;i < 2;i++)
     {
-        Joint_Angle[i + 4] = Controller_Motor_6020->motor_msg[i].motor_angle * Trans_Angle + 180;
+        Joint_Angle[i] = Controller_Motor_6020->motor_msg[i].motor_angle * Trans_Angle + 180;
     }
 }
 
@@ -149,4 +182,3 @@ void Controller_Uart_tx_init(uart_msg_t *tx_msg, uint8_t *tx_buf)
     tx_msg->pBuffer = tx_buf;
     tx_msg->Len = CONTROLLER_UART_DATA_LEN;
 }
-#endif /* __CONTROLLER_TASK_H__ */
