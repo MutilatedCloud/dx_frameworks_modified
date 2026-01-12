@@ -9,45 +9,12 @@
 #include <stdio.h>
  #include <stdint.h>
 #include "crc8_crc16.h"
+
 float32_t test_angle[6];
 uint8_t testUart_Send_Buffer[DATA_FRAME_LENGTH] = {0};
 Controller_t Transmit_Frame_Data = {0};
-
-static void Data_Concatenation(const uint8_t *pData)
-{
-    static uint8_t seq = 0;
-    uint8_t zero[2]={0,0};
-    // 帧头数据
-    Transmit_Frame_Data.frame_header.sof = 0xA5;
-    Transmit_Frame_Data.frame_header.data_length = DATA_LENGTH;
-    Transmit_Frame_Data.frame_header.seq = seq;
-    append_CRC8_check_sum((uint8_t *)(&Transmit_Frame_Data.frame_header), 5);
-    
-    // 命令码ID
-    Transmit_Frame_Data.cmd_id = CONTROLLER_CMD_ID;
-    // 数据段
-    memcpy(Transmit_Frame_Data.data, pData, DATA_LENGTH);
-    memcpy(Transmit_Frame_Data.data+DATA_LENGTH-2, zero, 2);
-    
-    // 帧尾CRC16，整包校验
-    append_CRC16_check_sum((uint8_t *)(&Transmit_Frame_Data), DATA_FRAME_LENGTH);
-
-    if (seq == 0xff) 
-    {
-        seq = 0;
-    }
-    else 
-    {
-        seq++;
-    }
-}
-
 uart_msg_t crc_send_msg;
-void crc_send_msg_init(void)
-{
-    crc_send_msg.huart = &huart7;
-    crc_send_msg.Len = DATA_FRAME_LENGTH;
-}
+
 void Controller_Task(void *argument)
 {
     /* USER CODE BEGIN Controller_Task */
@@ -227,4 +194,39 @@ void Controller_Uart_tx_init(uart_msg_t *tx_msg, uint8_t *tx_buf)
     tx_msg->huart = &huart7;
     tx_msg->pBuffer = tx_buf;
     tx_msg->Len = CONTROLLER_UART_DATA_LEN;
+}
+
+void Data_Concatenation(const uint8_t *pData)
+{
+    static uint8_t seq = 0;
+    uint8_t zero[2]={0,0};
+    // 帧头数据
+    Transmit_Frame_Data.frame_header.sof = 0xA5;
+    Transmit_Frame_Data.frame_header.data_length = DATA_LENGTH;
+    Transmit_Frame_Data.frame_header.seq = seq;
+    append_CRC8_check_sum((uint8_t *)(&Transmit_Frame_Data.frame_header), 5);
+    
+    // 命令码ID
+    Transmit_Frame_Data.cmd_id = CONTROLLER_CMD_ID;
+    // 数据段
+    memcpy(Transmit_Frame_Data.data, pData, DATA_LENGTH);
+    memcpy(Transmit_Frame_Data.data+DATA_LENGTH-2, zero, 2);
+    
+    // 帧尾CRC16，整包校验
+    append_CRC16_check_sum((uint8_t *)(&Transmit_Frame_Data), DATA_FRAME_LENGTH);
+
+    if (seq == 0xff) 
+    {
+        seq = 0;
+    }
+    else 
+    {
+        seq++;
+    }
+}
+
+void crc_send_msg_init(void)
+{
+    crc_send_msg.huart = &huart7;
+    crc_send_msg.Len = DATA_FRAME_LENGTH;
 }
