@@ -7,8 +7,7 @@
 #include "uart_api.h"
 #include "usart.h"
 #include <stdio.h>
- #include <stdint.h>
-#include "crc8_crc16.h"
+#include <stdint.h>
 
 float32_t test_angle[6];
 uint8_t testUart_Send_Buffer[DATA_FRAME_LENGTH] = {0};
@@ -31,7 +30,6 @@ void Controller_Task(void *argument)
     Motor_Init_DJI(&Controller_Motor_DJI, &Controller_Motor_6020); 
     Controller_Wait_And_Capture_Zero(Controller_Motor_DJI,Controller_Motor_6020,Joint_Angle,Angle_Zero_Point);
     Controller_Uart_tx_init(&Controller_Uart_tx_msg, Uart_Send_Buffer);
-    crc_send_msg_init();
     for(;;)
     {
         Controller_Angle_Refresh(Controller_Motor_DJI,  Controller_Motor_6020, Joint_Angle);
@@ -53,18 +51,8 @@ void Controller_Task(void *argument)
 
         UART_Message_Trans(Joint_Angle, Uart_Send_Buffer);
 
-        Data_Concatenation(Uart_Send_Buffer);
-
-        // Controller_Uart_tx_msg.pBuffer = Uart_Send_Buffer;
-        // Controller_Uart_tx_msg.Len = CONTROLLER_UART_DATA_LEN;
-        // memcpy(testUart_Send_Buffer, Uart_Send_Buffer,CONTROLLER_UART_DATA_LEN);
-
-        // uart_tx_send_IT(&Controller_Uart_tx_msg);
-        crc_send_msg.Len = DATA_FRAME_LENGTH;
-        crc_send_msg.pBuffer = (uint8_t *)(&Transmit_Frame_Data);
-        memcpy(testUart_Send_Buffer, (uint8_t *)(&Transmit_Frame_Data), DATA_FRAME_LENGTH);
-        uart_tx_send_IT(&crc_send_msg);
-        osDelay(4);
+        uart_tx_send_IT(&Controller_Uart_tx_msg);
+        osDelay(10);
     }
 }
 
@@ -188,7 +176,6 @@ uart_status_t UART_Message_Parse(const uint8_t in_buf[], float32_t out_array[])
     return UART_OK;
 }
 
-
 void Controller_Uart_tx_init(uart_msg_t *tx_msg, uint8_t *tx_buf)
 {
     tx_msg->huart = &huart7;
@@ -204,7 +191,7 @@ void Data_Concatenation(const uint8_t *pData)
     Transmit_Frame_Data.frame_header.sof = 0xA5;
     Transmit_Frame_Data.frame_header.data_length = DATA_LENGTH;
     Transmit_Frame_Data.frame_header.seq = seq;
-    append_CRC8_check_sum((uint8_t *)(&Transmit_Frame_Data.frame_header), 5);
+    Transmit_Frame_Data.frame_header.crc8 = 0;
     
     // 命令码ID
     Transmit_Frame_Data.cmd_id = CONTROLLER_CMD_ID;
@@ -212,8 +199,8 @@ void Data_Concatenation(const uint8_t *pData)
     memcpy(Transmit_Frame_Data.data, pData, DATA_LENGTH);
     memcpy(Transmit_Frame_Data.data+DATA_LENGTH-2, zero, 2);
     
-    // 帧尾CRC16，整包校验
-    append_CRC16_check_sum((uint8_t *)(&Transmit_Frame_Data), DATA_FRAME_LENGTH);
+    // 帧尾CRC16，整包校验（禁用CRC时置0）
+    Transmit_Frame_Data.frame_tail = 0;
 
     if (seq == 0xff) 
     {

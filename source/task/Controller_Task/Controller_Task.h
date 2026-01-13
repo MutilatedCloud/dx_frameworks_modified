@@ -28,7 +28,7 @@
 #define Controller_Motor_6020_All_ID 0x1FF
 #define Controller_Motor_2006_All_ID 0x200
 
-#define CONTROLLER_UART_DATA_LEN 30
+#define CONTROLLER_UART_DATA_LEN 24
 
 #define FRAME_HEADER_LENGTH 5 // 帧头数据长度
 #define CMD_ID_LENGTH 2       // 命令码ID数据长度
