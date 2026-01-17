@@ -126,15 +126,28 @@ const osThreadAttr_t  Controller_Task_attributes = {
     .priority   = (osPriority_t)osPriorityNormal,
 };
 
+osThreadId_t Referee_TaskHandle;
+uint32_t  Referee_TaskBuffer[256];
+osStaticThreadDef_t  Referee_TaskControlBlock;
+const osThreadAttr_t  Referee_Task_attributes = {
+    .name       = " Referee_Task",
+    .cb_mem     = & Referee_TaskControlBlock,
+    .cb_size    = sizeof( Referee_TaskControlBlock),
+    .stack_mem  = & Referee_TaskBuffer[0],
+    .stack_size = sizeof(Referee_TaskBuffer),
+    .priority   = (osPriority_t)osPriorityNormal,
+};
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void uart_test(void *argument);
 void Controller_Task(void *argument);
+void Referee_Task(void *argument);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
 void IMU_TempCtrlTask(void *argument);
 void Remoter_Task(void *argument);
+
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -184,6 +197,7 @@ void MX_FREERTOS_Init(void) {
   
   uartTestHandle = osThreadNew(uart_test, NULL, &uartTest_attributes);
   Controller_TaskHandle = osThreadNew(Controller_Task, NULL, &Controller_Task_attributes);
+  Referee_TaskHandle = osThreadNew(Referee_Task, NULL, &Referee_Task_attributes);
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -269,6 +283,18 @@ __weak void Controller_Task(void *argument)
     
     osDelay(1);
   }
+}
+
+__weak void Referee_Task(void *argument)
+{
+  /* USER CODE BEGIN Referee_Task */
+  UNUSED(argument);
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END Referee_Task */
 }
 /* USER CODE END Application */
 
