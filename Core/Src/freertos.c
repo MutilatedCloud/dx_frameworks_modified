@@ -137,11 +137,25 @@ const osThreadAttr_t  Referee_Task_attributes = {
     .stack_size = sizeof(Referee_TaskBuffer),
     .priority   = (osPriority_t)osPriorityNormal,
 };
+
+
+uint32_t Buzzer_TaskBuffer[1024];  // 栈大小：1024 * 4字节 = 4096字节
+osStaticThreadDef_t Buzzer_TaskControlBlock;  // 静态任务控制块
+osThreadId_t Buzzer_TaskHandle;  // 任务句柄
+const osThreadAttr_t Buzzer_Task_attributes = {
+  .name = "Buzzer_Task",        // 任务名称（调试用）
+  .cb_mem = &Buzzer_TaskControlBlock,  // 控制块地址（静态创建）
+  .cb_size = sizeof(Buzzer_TaskControlBlock),  // 控制块大小
+  .stack_mem = &Buzzer_TaskBuffer[0],  // 栈空间地址
+  .stack_size = sizeof(Buzzer_TaskBuffer),  // 栈大小
+  .priority = (osPriority_t)osPriorityNormal,  // 优先级（与默认任务相同）
+};
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void uart_test(void *argument);
 void Controller_Task(void *argument);
 void Referee_Task(void *argument);
+void Buzzer_Task(void *arguments);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -198,6 +212,7 @@ void MX_FREERTOS_Init(void) {
   uartTestHandle = osThreadNew(uart_test, NULL, &uartTest_attributes);
   Controller_TaskHandle = osThreadNew(Controller_Task, NULL, &Controller_Task_attributes);
   Referee_TaskHandle = osThreadNew(Referee_Task, NULL, &Referee_Task_attributes);
+  Buzzer_TaskHandle = osThreadNew(Buzzer_Task, NULL, &Buzzer_Task_attributes);
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -295,6 +310,15 @@ __weak void Referee_Task(void *argument)
     osDelay(1);
   }
   /* USER CODE END Referee_Task */
+}
+
+__weak void Buzzer_Task(void *argument)
+{
+  UNUSED(argument);
+  for(;;)
+  {
+    osDelay(1);
+  }
 }
 /* USER CODE END Application */
 

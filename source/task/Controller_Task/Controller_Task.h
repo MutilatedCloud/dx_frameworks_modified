@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 #include "arm_math_types.h"
-#include "motor_DJI.h"
-#include "uart_api.h"
 
 #define Trans_Angle (360.0f / 8191.0f)
 
@@ -30,13 +28,19 @@
 
 #define CONTROLLER_UART_DATA_LEN 24
 
+/**
+ * @brief 控制器发送给外部的关节角调试数据（单位：弧度）。
+ */
+extern float32_t test_angle[6];
+
+/**
+ * @brief 控制器 UART 发送缓冲区（长度为 CONTROLLER_UART_DATA_LEN）。
+ */
+extern uint8_t Uart_Send_Buffer[CONTROLLER_UART_DATA_LEN];
+
+/**
+ * @brief 控制器主任务入口（FreeRTOS 线程函数）。
+ */
 void Controller_Task(void *argument);
-void Motor_Init_DJI(DJI_motor_t **Controller_Motor_DJI, DJI_motor_t **Controller_Motor_6020);
-void Controller_Angle_Refresh(DJI_motor_t *Controller_Motor_DJI, DJI_motor_t *Controller_Motor_6020, float32_t *Joint_Angle);
-void UART_Message_Trans(float32_t float_array[], uint8_t out_buf[]);
-uart_status_t UART_Message_Parse(const uint8_t in_buf[], float32_t out_array[]);
-void Controller_Uart_tx_init(uart_msg_t *tx_msg, uint8_t *tx_buf);
-void Controller_Wait_And_Capture_Zero(DJI_motor_t *Controller_Motor_DJI,DJI_motor_t *Controller_Motor_6020,float32_t *Joint_Angle,float32_t *Angle_Zero_Point);
-uint8_t Controller_Motor_Data_Ready(DJI_motor_t *Controller_Motor_DJI, DJI_motor_t *Controller_Motor_6020);
 
 #endif
