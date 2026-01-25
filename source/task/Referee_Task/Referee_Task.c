@@ -20,7 +20,7 @@ void Referee_Task(void *argument)
     for(;;)
     {
         uint8_t Controller_data[30] = {0};
-        for(int i = 0;i < 24;i++)
+        for(int i = 0;i < CONTROLLER_UART_DATA_LEN;i++)
         {
             Controller_data[i] = Uart_Send_Buffer[i];
         }

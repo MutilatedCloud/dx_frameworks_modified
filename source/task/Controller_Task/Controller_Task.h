@@ -26,21 +26,12 @@
 #define Controller_Motor_6020_All_ID 0x1FF
 #define Controller_Motor_2006_All_ID 0x200
 
-#define CONTROLLER_UART_DATA_LEN 24
+#define CONTROLLER_UART_DATA_LEN 26
 
-/**
- * @brief 控制器发送给外部的关节角调试数据（单位：弧度）。
- */
 extern float32_t test_angle[6];
 
-/**
- * @brief 控制器 UART 发送缓冲区（长度为 CONTROLLER_UART_DATA_LEN）。
- */
 extern uint8_t Uart_Send_Buffer[CONTROLLER_UART_DATA_LEN];
 
-/**
- * @brief 控制器主任务入口（FreeRTOS 线程函数）。
- */
 void Controller_Task(void *argument);
 
 #endif

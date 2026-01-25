@@ -8,7 +8,7 @@
 void Buzzer_Task(void *argument)
 {
     UNUSED(argument);
-    buzzer_init();
+    //buzzer_init();
     int16_t tone[]={H3,H2,H1,H2,H3,H4,H3,H2,
         H3,H2,H1,H2,H3,H4,H3,H2,H3,
         H2,H1,H2,H3,H4,H3,H2,H3,
