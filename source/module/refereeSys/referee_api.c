@@ -153,7 +153,14 @@ void CtrllerReadData(uint8_t *buff)
 				switch (custom_controller_info.CmdID)
 				{
                 case 0x0302:  // 0x0302
-					memcpy(&custom_controller_info.CustomController, (buff + DATA_Offset), LEN_custom_controller);
+				{
+					uint16_t copy_len = LEN_custom_controller;
+					if (copy_len > (uint16_t)sizeof(custom_controller_info.CustomController))
+					{
+						copy_len = (uint16_t)sizeof(custom_controller_info.CustomController);
+					}
+					memcpy(&custom_controller_info.CustomController, (buff + DATA_Offset), copy_len);
+				}
 					break;
 
 					case 0x0304:
@@ -210,9 +217,15 @@ custom_controller_info_t *get_custom_controller_msg(void)
 uint8_t seq = 0;/*sequence初始化*/
 void referee_data_pack_handle(uint8_t sof, uint16_t cmd_id, uint8_t *p_data, uint16_t len)//英步usart1 工程uart10 常规链路 ui发送
 {
-	unsigned char i = 0;
 	uint8_t tx_buff[MAX_SIZE];
 	uint16_t frame_length = frameheader_len/*5*/ + cmd_len/*2*/ + len/*函参*/ + crc_len/*2*/;
+
+	/* Protect against local buffer overflow; keep wire format unchanged. */
+	if (frame_length > MAX_SIZE)
+	{
+		return;
+	}
+
 	memset(tx_buff, 0, frame_length);  //将数组tx_buff中长度为“frame_length”的空间赋值为0
 	tx_buff[0] = sof/*函参*/;
 	memcpy(&tx_buff[1], (uint8_t *)&len, sizeof(len));
@@ -223,8 +236,10 @@ void referee_data_pack_handle(uint8_t sof, uint16_t cmd_id, uint8_t *p_data, uin
 	Append_CRC16_Check_Sum(tx_buff, frame_length);
 	if (seq == 0xff) seq = 0;
 	else seq++;/*sequence循环*/
-	for (i = 0;i < frame_length;i++)
+
+	/* Send the whole frame in one shot to avoid stack-buffer lifetime bugs with byte-wise IT sends. */
+	while (HAL_UART_Transmit(server_recieve_data.rx_msg->huart, tx_buff, frame_length, 100) == HAL_BUSY)
 	{
-		while (HAL_UART_Transmit_IT(server_recieve_data.rx_msg->huart,&tx_buff[i],sizeof(tx_buff[i])) == HAL_BUSY);		
+		/* busy-wait (same behavior as previous implementation) */
 	}
 }

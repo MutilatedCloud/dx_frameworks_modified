@@ -6,6 +6,9 @@
 #include "arm_math_types.h"
 #include "Controller_Task.h"
 
+/* Debug mirror length for the actual transmitted payload (26 bytes data + 4 bytes padding/sign/etc). */
+#define CONTROLLER_DEBUG_TX_LEN 30
+
 typedef struct
 {
     float32_t joint_angle[6]; /*!< 六关节相对角度，单位：弧度；索引 0~5 对应关节 0~5。 */
@@ -13,7 +16,7 @@ typedef struct
 
 typedef struct
 {
-    uint8_t tx_buf[CONTROLLER_UART_DATA_LEN]; /*!< UART 发送缓冲区镜像，长度为 CONTROLLER_UART_DATA_LEN。 */
+    uint8_t tx_buf[CONTROLLER_DEBUG_TX_LEN]; /*!< UART 发送数据镜像（用于观察完整发送 payload）。 */
 } controller_dbg_uart_t;
 
 typedef struct

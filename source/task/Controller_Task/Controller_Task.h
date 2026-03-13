@@ -32,6 +32,9 @@ extern float32_t test_angle[6];
 
 extern uint8_t Uart_Send_Buffer[CONTROLLER_UART_DATA_LEN];
 
+/* Joint5 sign flag for extended payload byte (0 = non-negative, 1 = negative). */
+extern volatile uint8_t g_controller_joint5_sign;
+
 void Controller_Task(void *argument);
 
 #endif

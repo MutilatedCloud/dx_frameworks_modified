@@ -17,6 +17,8 @@ void Referee_Task(void *argument)
     /* USER CODE BEGIN Referee_Task */
     UNUSED(argument);
     referee_init(&huart7);
+    /* Delay enabling UART TX to avoid sending during early startup transients. */
+    osDelay(2000);
     for(;;)
     {
         uint8_t Controller_data[30] = {0};
@@ -24,6 +26,8 @@ void Referee_Task(void *argument)
         {
             Controller_data[i] = Uart_Send_Buffer[i];
         }
+        /* Extended byte 27: joint5 sign (0 = non-negative, 1 = negative). */
+        Controller_data[CONTROLLER_UART_DATA_LEN] = (uint8_t)g_controller_joint5_sign;
         referee_data_pack_handle(0xA5, 0x0302 , Controller_data, sizeof(Controller_data));
         osDelay(50);
     }
